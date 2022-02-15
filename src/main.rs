@@ -60,7 +60,7 @@ fn parse_results(result: String, word: &mut [Letter; 5], possible_characters: &m
 //DONT FORGET TO CHANGE &STR TO STRING WHEN CHECKING IN DICTIONARY
 
 fn main() {
-	let version = 3;
+	let version = 4;
 	println!("VERSION {}", version);
 	println!("Thank you for choosing Wordgle! It's very simple to use. Seperate the state of characters in the word using -s! Represent green characters with 2, yellow characters with 1, and grey characters with 0.");
 	println!("Example: 2-1-0-1-2");
@@ -171,7 +171,7 @@ fn main() {
 					i += 1;
 
 					//reached end of current loop without finding answer. SEARCH AGAIN AUTOMATICALLY!
-					if i == word_vec.len() {
+					if i == word_vec.len() - 1 || i == word_vec.len() {
 						do_rep = false;
 					}
 				}
