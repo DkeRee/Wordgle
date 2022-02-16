@@ -33,13 +33,14 @@ impl Letter {
 	check if word contains possible characters
 */
 
-fn parse_results(result: String, word: &mut [Letter; 5], possible_characters: &mut Vec<String>, banned_characters: &mut Vec<String>, are_green: &mut bool, are_yellow: &mut bool) {
+fn parse_results(result: String, word: &mut [Letter; 5], green_characters: &mut Vec<String>, possible_characters: &mut Vec<String>, banned_characters: &mut Vec<String>, are_green: &mut bool, are_yellow: &mut bool) {
 	let split = result.trim().split("-");
 
 	let result_vec: Vec<&str> = split.collect();
 	for i in 0..result_vec.len() {
 		match result_vec[i].parse::<u8>().unwrap() {
 			2 => {
+				green_characters.push(word[i].letter.clone());
 				word[i].confirmed = true;
 				*are_green = true;
 			}
@@ -50,9 +51,20 @@ fn parse_results(result: String, word: &mut [Letter; 5], possible_characters: &m
 			}
 			0 => {
 				banned_characters.push(word[i].letter.clone());
-				//word[i].garbage.push(word[i].letter.clone());
 			}
 			_ => unreachable!()
+		}
+	}
+}
+
+fn parse_garbage(banned_characters: &mut Vec<String>, word_vec: &mut Vec<&str>, i: usize, no_banned_chars: &mut bool) {
+	for o in 0..banned_characters.len() {
+		//WORD CONTAINS BANNED CHARACTER, DEFINITE FALSE
+		if word_vec[i].contains(&banned_characters[o]) {
+			*no_banned_chars = false;
+			break;
+		} else {
+			*no_banned_chars = true;
 		}
 	}
 }
@@ -60,7 +72,7 @@ fn parse_results(result: String, word: &mut [Letter; 5], possible_characters: &m
 //DONT FORGET TO CHANGE &STR TO STRING WHEN CHECKING IN DICTIONARY
 
 fn main() {
-	let version = 4;
+	let version = 6;
 	println!("VERSION {}", version);
 	println!("Thank you for choosing Wordgle! It's very simple to use. Seperate the state of characters in the word using -s! Represent green characters with 2, yellow characters with 1, and grey characters with 0.");
 	println!("Example: 2-1-0-1-2");
@@ -69,6 +81,7 @@ fn main() {
 
 	let mut first_round = true;
 
+	let mut green_characters = Vec::new();
 	let mut possible_characters = Vec::new();
 	let mut banned_characters = Vec::new();
 
@@ -148,16 +161,28 @@ fn main() {
 						break;
 					}
 				}
+
 				//check for banned characters shown by grey chars
-				for o in 0..banned_characters.len() {
-					//WORD CONTAINS BANNED CHARACTER, DEFINITE FALSE
-					if word_vec[i].contains(&banned_characters[o]) {
-						no_banned_chars = false;
-						break;
-					} else {
-						no_banned_chars = true;
+				if are_green == true {
+					//overide banned char if banned word has duplicate green char
+					for gr in 0..green_characters.len() {
+						if word_vec[i].contains(&green_characters[gr]) {
+							no_banned_chars = true;
+							break;
+						} else {
+							parse_garbage(&mut banned_characters, &mut word_vec, i, &mut no_banned_chars);
+							break;
+						}
 					}
+				} else {
+					parse_garbage(&mut banned_characters, &mut word_vec, i, &mut no_banned_chars);
 				}
+
+				//for debug purposes
+				//println!("{}", green_char);
+				//println!("{}", contains_yellow);
+				//println!("{}", no_garbage);
+				//println!("{}", no_banned_chars);
 				
 				//final check + confirm word
 				if green_char && contains_yellow && no_garbage && no_banned_chars {
@@ -167,13 +192,12 @@ fn main() {
 					word_vec.remove(i);
 					break;
 				} else {
-					word_vec.remove(i);
-					i += 1;
-
 					//reached end of current loop without finding answer. SEARCH AGAIN AUTOMATICALLY!
-					if i == word_vec.len() - 1 || i == word_vec.len() {
+					if i == (word_vec.len() - 1) || i == (word_vec.len() - 2) {
 						do_rep = false;
 					}
+					word_vec.remove(i);
+					i += 1;
 				}
 			}
 		} else {
@@ -194,7 +218,7 @@ fn main() {
 			let mut results = String::new();
 			io::stdin().read_line(&mut results);
 			
-			parse_results(results, &mut word, &mut possible_characters, &mut banned_characters, &mut are_green, &mut are_yellow);
+			parse_results(results, &mut word, &mut green_characters, &mut possible_characters, &mut banned_characters, &mut are_green, &mut are_yellow);
 		}
 	}
 }
