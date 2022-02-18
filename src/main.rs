@@ -191,14 +191,13 @@ fn main() {
 					}
 				}
 
-				//check for banned characters shown by grey chars
+				//check for banned characters shown by green chars
 				if are_green == true {
 					let mut exit = false;
 					for o in 0..banned_characters.len() {
-						//WORD CONTAINS BANNED CHARACTER, DEFINITE FALSE
 						for gr in 0..green_characters.len() {							
 							if banned_characters[o].letter != green_characters[gr].letter && banned_characters[o].index != green_characters[gr].index {
-								//only check if grey word is not already green
+								//possible unaccetable word
 								if word_vec[i].contains(&banned_characters[o].letter) {
 									exit = true;
 									no_banned_chars = false;
@@ -207,6 +206,7 @@ fn main() {
 									no_banned_chars = true;
 								}
 							} else {
+								//skip character, it is safe since it is green
 								break;
 							}
 						}
