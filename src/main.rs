@@ -9,12 +9,27 @@ struct Letter {
 	confirmed: bool
 }
 
+#[derive(Debug)]
+struct IndexedLetter {
+	letter: String,
+	index: usize
+}
+
 impl Letter {
 	fn create_struct(character: &str) -> Letter {
 		Letter {
 			letter: String::from(character),
 			garbage: Vec::new(),
 			confirmed: false
+		}
+	}
+}
+
+impl IndexedLetter {
+	fn create_struct(character: String, index: usize) -> IndexedLetter {
+		IndexedLetter {
+			letter: character,
+			index: index
 		}
 	}
 }
@@ -33,14 +48,16 @@ impl Letter {
 	check if word contains possible characters
 */
 
-fn parse_results(result: String, word: &mut [Letter; 5], green_characters: &mut Vec<String>, possible_characters: &mut Vec<String>, banned_characters: &mut Vec<String>, are_green: &mut bool, are_yellow: &mut bool) {
+fn parse_results(result: String, word: &mut [Letter; 5], green_characters: &mut Vec<IndexedLetter>, possible_characters: &mut Vec<String>, banned_characters: &mut Vec<IndexedLetter>, are_green: &mut bool, are_yellow: &mut bool) {
 	let split = result.trim().split("-");
 
 	let result_vec: Vec<&str> = split.collect();
+	let mut temp_greys = Vec::new();
+
 	for i in 0..result_vec.len() {
 		match result_vec[i].parse::<u8>().unwrap() {
 			2 => {
-				green_characters.push(word[i].letter.clone());
+				green_characters.push(IndexedLetter::create_struct(word[i].letter.clone(), i));
 				word[i].confirmed = true;
 				*are_green = true;
 			}
@@ -50,17 +67,29 @@ fn parse_results(result: String, word: &mut [Letter; 5], green_characters: &mut 
 				*are_yellow = true;
 			}
 			0 => {
-				banned_characters.push(word[i].letter.clone());
+				temp_greys.push(IndexedLetter::create_struct(word[i].letter.clone(), i));
 			}
 			_ => unreachable!()
 		}
 	}
+
+	//parse temp greys
+	for i in 0..temp_greys.len() {
+		for gr in 0..green_characters.len() {
+			if temp_greys[i].letter == green_characters[gr].letter {
+				break;
+			} else if gr + 1 == green_characters.len() {
+				banned_characters.push(IndexedLetter::create_struct(temp_greys[i].letter.clone(), temp_greys[i].index));
+				break;
+			}
+		}
+	}
 }
 
-fn parse_garbage(banned_characters: &mut Vec<String>, word_vec: &mut Vec<&str>, i: usize, no_banned_chars: &mut bool) {
+fn parse_garbage(banned_characters: &mut Vec<IndexedLetter>, word_vec: &mut Vec<&str>, i: usize, no_banned_chars: &mut bool) {
 	for o in 0..banned_characters.len() {
 		//WORD CONTAINS BANNED CHARACTER, DEFINITE FALSE
-		if word_vec[i].contains(&banned_characters[o]) {
+		if word_vec[i].contains(&banned_characters[o].letter) {
 			*no_banned_chars = false;
 			break;
 		} else {
@@ -72,7 +101,7 @@ fn parse_garbage(banned_characters: &mut Vec<String>, word_vec: &mut Vec<&str>, 
 //DONT FORGET TO CHANGE &STR TO STRING WHEN CHECKING IN DICTIONARY
 
 fn main() {
-	let version = 6;
+	let version = 7;
 	println!("VERSION {}", version);
 	println!("Thank you for choosing Wordgle! It's very simple to use. Seperate the state of characters in the word using -s! Represent green characters with 2, yellow characters with 1, and grey characters with 0.");
 	println!("Example: 2-1-0-1-2");
@@ -81,16 +110,16 @@ fn main() {
 
 	let mut first_round = true;
 
-	let mut green_characters = Vec::new();
+	let mut green_characters: Vec<IndexedLetter> = Vec::new();
 	let mut possible_characters = Vec::new();
-	let mut banned_characters = Vec::new();
+	let mut banned_characters: Vec<IndexedLetter> = Vec::new();
 
 	let words = fs::read_to_string("words.txt").unwrap();
 	let mut word_vec: Vec<&str> = words.lines().collect();
 
 	let mut win = false;
 
-	let mut word: [Letter; 5] = [Letter::create_struct("a"), Letter::create_struct("e"), Letter::create_struct("s"), Letter::create_struct("i"), Letter::create_struct("r")];
+	let mut word: [Letter; 5] = [Letter::create_struct("l"), Letter::create_struct("a"), Letter::create_struct("r"), Letter::create_struct("e"), Letter::create_struct("s")];
 
 	let mut are_green = false;
 	let mut are_yellow = false;
@@ -104,7 +133,7 @@ fn main() {
 			let mut green_char = true;
 			let mut contains_yellow = false;
 			let mut no_garbage = true;
-			let mut no_banned_chars = false;
+			let mut no_banned_chars = true;
 
 			let mut i = 0;
 
@@ -164,18 +193,38 @@ fn main() {
 
 				//check for banned characters shown by grey chars
 				if are_green == true {
-					//overide banned char if banned word has duplicate green char
-					for gr in 0..green_characters.len() {
-						if word_vec[i].contains(&green_characters[gr]) {
-							no_banned_chars = true;
-							break;
-						} else {
-							parse_garbage(&mut banned_characters, &mut word_vec, i, &mut no_banned_chars);
+					let mut exit = false;
+					for o in 0..banned_characters.len() {
+						//WORD CONTAINS BANNED CHARACTER, DEFINITE FALSE
+						for gr in 0..green_characters.len() {							
+							if banned_characters[o].letter != green_characters[gr].letter && banned_characters[o].index != green_characters[gr].index {
+								//only check if grey word is not already green
+								if word_vec[i].contains(&banned_characters[o].letter) {
+									exit = true;
+									no_banned_chars = false;
+									break;
+								} else {
+									no_banned_chars = true;
+								}
+							} else {
+								break;
+							}
+						}
+
+						if exit == true {
 							break;
 						}
 					}
 				} else {
-					parse_garbage(&mut banned_characters, &mut word_vec, i, &mut no_banned_chars);
+					for o in 0..banned_characters.len() {
+						//WORD CONTAINS BANNED CHARACTER, DEFINITE FALSE
+						if word_vec[i].contains(&banned_characters[o].letter) {
+							no_banned_chars = false;
+							break;
+						} else {
+							no_banned_chars = true;
+						}
+					}
 				}
 
 				//for debug purposes
