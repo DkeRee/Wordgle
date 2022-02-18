@@ -92,18 +92,6 @@ fn parse_results(result: String, word: &mut [Letter; 5], green_characters: &mut 
 	}
 }
 
-fn parse_garbage(banned_characters: &mut Vec<IndexedLetter>, word_vec: &mut Vec<&str>, i: usize, no_banned_chars: &mut bool) {
-	for o in 0..banned_characters.len() {
-		//WORD CONTAINS BANNED CHARACTER, DEFINITE FALSE
-		if word_vec[i].contains(&banned_characters[o].letter) {
-			*no_banned_chars = false;
-			break;
-		} else {
-			*no_banned_chars = true;
-		}
-	}
-}
-
 //DONT FORGET TO CHANGE &STR TO STRING WHEN CHECKING IN DICTIONARY
 
 fn main() {
