@@ -74,14 +74,20 @@ fn parse_results(result: String, word: &mut [Letter; 5], green_characters: &mut 
 	}
 
 	//parse temp greys
-	for i in 0..temp_greys.len() {
-		for gr in 0..green_characters.len() {
-			if temp_greys[i].letter == green_characters[gr].letter {
-				break;
-			} else if gr + 1 == green_characters.len() {
-				banned_characters.push(IndexedLetter::create_struct(temp_greys[i].letter.clone(), temp_greys[i].index));
-				break;
+	if *are_green == true {
+		for i in 0..temp_greys.len() {
+			for gr in 0..green_characters.len() {
+				if temp_greys[i].letter == green_characters[gr].letter {
+					break;
+				} else if gr + 1 == green_characters.len() {
+					banned_characters.push(IndexedLetter::create_struct(temp_greys[i].letter.clone(), temp_greys[i].index));
+					break;
+				}
 			}
+		}
+	} else {
+		for i in 0..temp_greys.len() {
+			banned_characters.push(IndexedLetter::create_struct(temp_greys[i].letter.clone(), temp_greys[i].index));
 		}
 	}
 }
