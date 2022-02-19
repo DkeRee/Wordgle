@@ -48,11 +48,10 @@ impl IndexedLetter {
 	check if word contains possible characters
 */
 
-fn parse_results(result: String, word: &mut [Letter; 5], green_characters: &mut Vec<IndexedLetter>, possible_characters: &mut Vec<String>, banned_characters: &mut Vec<IndexedLetter>, are_green: &mut bool, are_yellow: &mut bool) {
+fn parse_results(result: String, word: &mut [Letter; 5], green_characters: &mut Vec<IndexedLetter>, possible_characters: &mut Vec<IndexedLetter>, banned_characters: &mut Vec<IndexedLetter>, are_green: &mut bool, are_yellow: &mut bool) {
 	let split = result.trim().split("-");
 
 	let result_vec: Vec<&str> = split.collect();
-	let mut temp_greys = Vec::new();
 
 	for i in 0..result_vec.len() {
 		match result_vec[i].parse::<u8>().unwrap() {
@@ -62,40 +61,31 @@ fn parse_results(result: String, word: &mut [Letter; 5], green_characters: &mut 
 				*are_green = true;
 			}
 			1 => {
-				possible_characters.push(word[i].letter.clone());
+				possible_characters.push(IndexedLetter::create_struct(word[i].letter.clone(), i));
 				word[i].garbage.push(word[i].letter.clone());
 				*are_yellow = true;
 			}
 			0 => {
-				temp_greys.push(IndexedLetter::create_struct(word[i].letter.clone(), i));
+				banned_characters.push(IndexedLetter::create_struct(word[i].letter.clone(), i));
 			}
 			_ => unreachable!()
 		}
 	}
+}
 
-	//parse temp greys
-	if *are_green == true {
-		for i in 0..temp_greys.len() {
-			for gr in 0..green_characters.len() {
-				if temp_greys[i].letter == green_characters[gr].letter {
-					break;
-				} else if gr + 1 == green_characters.len() {
-					banned_characters.push(IndexedLetter::create_struct(temp_greys[i].letter.clone(), temp_greys[i].index));
-					break;
-				}
-			}
-		}
-	} else {
-		for i in 0..temp_greys.len() {
-			banned_characters.push(IndexedLetter::create_struct(temp_greys[i].letter.clone(), temp_greys[i].index));
+fn is_doubled(searching_character: &String, character_vec: &mut Vec<IndexedLetter>) -> bool {
+	for i in 0..character_vec.len() {
+		if searching_character == &character_vec[i].letter {
+			return true;
 		}
 	}
+	return false;
 }
 
 //DONT FORGET TO CHANGE &STR TO STRING WHEN CHECKING IN DICTIONARY
 
 fn main() {
-	let version = 8;
+	let version = 9;
 	println!("VERSION {}", version);
 	println!("Thank you for choosing Wordgle! It's very simple to use. Seperate the state of characters in the word using -s! Represent green characters with 2, yellow characters with 1, and grey characters with 0.");
 	println!("Type 'exit' to restart!");
@@ -112,7 +102,7 @@ fn main() {
 		let mut first_round = true;
 
 		let mut green_characters: Vec<IndexedLetter> = Vec::new();
-		let mut possible_characters = Vec::new();
+		let mut possible_characters: Vec<IndexedLetter> = Vec::new();
 		let mut banned_characters: Vec<IndexedLetter> = Vec::new();
 
 		let words = fs::read_to_string("words.txt").unwrap();
@@ -163,7 +153,7 @@ fn main() {
 						//check for possible characters shown by yellow chars
 						for o in 0..possible_characters.len() {
 							//WORD DOES NOT CONTAIN THESE CHARACTERS, DEFINITE FALSE
-							if !word_vec[i].contains(&possible_characters[o]) {
+							if !word_vec[i].contains(&possible_characters[o].letter) {
 								contains_yellow = false;
 								break;
 							} else {
@@ -192,48 +182,76 @@ fn main() {
 						}
 					}
 
+					//i have no life:
+
 					//check for banned characters shown by green chars
+					let mut exit = false;
 					if are_green == true {
-						let mut exit = false;
+						//find if green character is doubled
 						for o in 0..banned_characters.len() {
-							for gr in 0..green_characters.len() {							
-								if banned_characters[o].letter != green_characters[gr].letter {
-									//possible unaccetable word
-									if word_vec[i].contains(&banned_characters[o].letter) {
-										exit = true;
-										no_banned_chars = false;
-										break;
-									} else {
-										no_banned_chars = true;
-									}
+							if !is_doubled(&banned_characters[o].letter, &mut green_characters) && !is_doubled(&banned_characters[o].letter, &mut possible_characters) {
+								//if it is NOT
+								//calculate normally
+								if word_vec[i].contains(&banned_characters[o].letter) {
+									no_banned_chars = false;
+									break;
 								} else {
-									//skip character, it is safe since it is green and on right index
-									if banned_characters[o].index == green_characters[gr].index {
-										break;
-									} else {
-										if word_vec[i].contains(&banned_characters[o].letter) {
-											exit = true;
-											no_banned_chars = false;
-											break;
-										} else {
-											no_banned_chars = true;
+									no_banned_chars = true;
+								}
+							} else {
+								//if it IS
+								//calculate edge case
+								for (ic, vec_char) in word_vec[i].chars().enumerate() {
+									if banned_characters[o].letter == String::from(vec_char) && banned_characters[o].index == ic { //my brain died here
+										for b in 0..banned_characters.len() {
+											if banned_characters[b].letter == String::from(vec_char) {
+												exit = true;
+												no_banned_chars = false;
+												break;
+											} else {
+												no_banned_chars = true;
+											}
 										}
 									}
+									if exit == true {
+										break;
+									}
 								}
-							}
-
-							if exit == true {
-								break;
+								if exit == true {
+									break;
+								}
 							}
 						}
 					} else {
+						//find if yellow character is doubled
 						for o in 0..banned_characters.len() {
-							//WORD CONTAINS BANNED CHARACTER, DEFINITE FALSE
-							if word_vec[i].contains(&banned_characters[o].letter) {
-								no_banned_chars = false;
-								break;
+							if !is_doubled(&banned_characters[o].letter, &mut possible_characters) {
+								if word_vec[i].contains(&banned_characters[o].letter) {
+									no_banned_chars = false;
+									break;
+								} else {
+									no_banned_chars = true;
+								}
 							} else {
-								no_banned_chars = true;
+								for (ic, vec_char) in word_vec[i].chars().enumerate() {
+									if banned_characters[o].letter == String::from(vec_char) && banned_characters[o].index == ic {
+										for b in 0..banned_characters.len() {
+											if banned_characters[b].letter == String::from(vec_char) {
+												exit = true;
+												no_banned_chars = false;
+												break;
+											} else {
+												no_banned_chars = true;
+											}
+										}
+									}
+									if exit == true {
+										break;
+									}
+								}
+								if exit == true {
+									break;
+								}
 							}
 						}
 					}
